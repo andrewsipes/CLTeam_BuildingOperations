@@ -19,6 +19,11 @@ You will also see any lint errors in the console.
 Launches the test runner in the interactive watch mode.\
 See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
+### `npm run typecheck`
+
+Checks TypeScript using the project's strict configuration without emitting
+JavaScript. Pull request CI runs this check before the production build.
+
 ### `npm run build`
 
 Builds the app for production to the `build` folder.\
