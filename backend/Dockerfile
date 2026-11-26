@@ -5,13 +5,18 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:10.0.404-resolute@sha256:2d64f50ba64d62b05c0154d81a219f18f0dc5e71cb6c852199d4022edf4daec9 AS build
 WORKDIR /src
 COPY ["backend.csproj", "."]
-RUN dotnet restore "backend.csproj"
+ARG NUGET_SOURCE
+RUN if [ -n "$NUGET_SOURCE" ]; then \
+      dotnet restore "backend.csproj" --source "$NUGET_SOURCE"; \
+    else \
+      dotnet restore "backend.csproj"; \
+    fi
 COPY . .
 WORKDIR "/src/"
-RUN dotnet build "backend.csproj" -c Release -o /app/build
+RUN dotnet build "backend.csproj" -c Release --no-restore -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "backend.csproj" -c Release -o /app/publish
+RUN dotnet publish "backend.csproj" -c Release --no-restore -o /app/publish
 
 FROM base AS final
 WORKDIR /app
