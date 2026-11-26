@@ -8,7 +8,9 @@ ARG NPM_REGISTRY
 RUN if [ -n "$NPM_REGISTRY" ]; then \
     export NPM_CONFIG_REGISTRY="$NPM_REGISTRY"; \
     fi; \
-    npm ci && npm install --global pm2
+    npm install --global npm@11.21.3 && \
+    npm ci && \
+    npm install --global pm2
 
 COPY . /usr/src/app
 RUN npm run build
