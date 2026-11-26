@@ -4,7 +4,11 @@ RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 COPY package.json package-lock.json ./
-RUN npm install && npm i pm2 -g
+ARG NPM_REGISTRY
+RUN if [ -n "$NPM_REGISTRY" ]; then \
+    export NPM_CONFIG_REGISTRY="$NPM_REGISTRY"; \
+    fi; \
+    npm ci && npm install --global pm2
 
 COPY . /usr/src/app
 RUN npm run build

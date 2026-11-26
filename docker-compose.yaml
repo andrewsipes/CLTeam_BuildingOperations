@@ -1,5 +1,22 @@
 services:
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        # Only set this on development environments to the npm MSFT proxy feed
+        # For production, leave it empty to use the default npm registry
+        NPM_REGISTRY: ${NPM_REGISTRY:-}
+
     ports:
-      - "3000:3000"
+      # Run the host map on 8090 since .net will be on 8080 already
+      - "8090:8080"
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        # Only set this on development environments to the nuget MSFT proxy feed
+        # For production, leave it empty to use the default NuGet sources
+        NUGET_SOURCE: ${NUGET_SOURCE:-}
+    ports:
+      - "8080:8080"
