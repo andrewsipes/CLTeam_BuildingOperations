@@ -39,8 +39,7 @@ jobs:
       - name: Build and lint
         run: npm run build
       - name: Run frontend tests
-        # https://jestjs.io/docs/cli#--watchall - `false` will prevent interactive watching, and instead run once
-        run: npm test -- --watchAll=false
+        run: npm test
       - name: Audit npm dependencies
         run: npm audit --audit-level=high
 
