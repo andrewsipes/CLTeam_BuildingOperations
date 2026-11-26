@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "FWqkmyNKU+c=",
+  "dgSpecHash": "IoEpbd4GJlk=",
   "success": true,
-  "projectFilePath": "/home/ajssalemo/code/CLTeam_BuildingOperations/backend/backend.csproj",
+  "projectFilePath": "/home/ajsalemo/code/CLTeam_BuildingOperations/backend/backend.csproj",
   "expectedPackageFiles": [
-    "/home/ajssalemo/.nuget/packages/microsoft.aspnetcore.openapi/10.0.12/microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
-    "/home/ajssalemo/.nuget/packages/microsoft.openapi/2.12.0/microsoft.openapi.2.12.0.nupkg.sha512"
+    "/home/ajsalemo/.nuget/packages/microsoft.aspnetcore.openapi/10.0.12/microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
+    "/home/ajsalemo/.nuget/packages/microsoft.openapi/2.12.0/microsoft.openapi.2.12.0.nupkg.sha512"
   ],
   "logs": []
 }
