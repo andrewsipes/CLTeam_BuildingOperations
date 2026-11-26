@@ -1,0 +1,102 @@
+name: PR CI
+
+on:
+  pull_request:
+    branches: [preview, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend build, test, and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install locked dependencies
+        # `npm ci` is recommended for pipelines/CI - explaination is here: https://docs.npmjs.com/cli/v10/commands/npm-ci?v=true
+        run: npm ci --no-audit
+      - name: Build and lint
+        run: npm run build
+      - name: Run frontend tests
+        # https://jestjs.io/docs/cli#--watchall - `false` will prevent interactive watching, and instead run once
+        run: npm test -- --watchAll=false
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+  backend:
+    name: API build, audit, and image scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('backend/backend.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+      - name: Restore and audit NuGet dependencies
+        # NuGet audit docs: https://learn.microsoft.com/en-us/nuget/concepts/auditing-packages#configuring-nuget-audit
+        # look for high level severities for now
+        run: >-
+          dotnet restore backend/backend.csproj
+          -p:NuGetAudit=true -p:NuGetAuditMode=all -p:NuGetAuditLevel=high
+          '-warnaserror:NU1900;NU1903;NU1904;NU1905'
+      - name: Build API with analyzers
+        # Run source code analysis at build time for .net: https://learn.microsoft.com/en-us/visualstudio/code-quality/disable-code-analysis?view=visualstudio
+        run: dotnet build backend/backend.csproj --configuration Release --no-restore -p:RunAnalyzersDuringBuild=true
+      - name: Build API image
+        run: docker build --tag building-operations-api:ci backend
+        # Uses the Trivy GitHub Action to scan the built Docker image for vulnerabilities.
+        # The action will fail the workflow if any HIGH or CRITICAL vulnerabilities are found.
+        # More info: https://github.com/aquasecurity/trivy-action
+      - name: Scan API image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'building-operations-api:ci'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scan Git history with Gitleaks
+        # gitleaks GitHuib Actions requires a license key for org repos, but nor personal ones - docs: https://github.com/gitleaks/gitleaks-action#questions
+        # to avoid passing a key here, to be safe, we can just use this via CLI
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo \
+            --env GIT_CONFIG_COUNT=1 --env GIT_CONFIG_KEY_0=safe.directory --env GIT_CONFIG_VALUE_0=/repo \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git --log-opts="--full-history -m HEAD" --redact --no-banner
